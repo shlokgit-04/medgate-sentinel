@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedGate Sentinel - Medical Report Analyzer</title>
+<style>
+:root{--navy:#0b1526;--panel:#12203a;--panel2:#182a4a;--teal:#2dd4bf;--teal-dim:#14b8a6;--text:#e6eefb;--muted:#8fa3c4;--red:#f87171;--amber:#fbbf24;--green:#34d399;--border:#24365c}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--navy);color:var(--text);min-height:100vh}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 16px 60px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--teal),#0ea5e9);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#04222b}
+h1{font-size:22px;letter-spacing:.3px}
+.tag{color:var(--muted);font-size:13px;margin-bottom:20px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.card h2{font-size:15px;color:var(--teal);margin-bottom:10px;text-transform:uppercase;letter-spacing:.8px}
+textarea{width:100%;min-height:150px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:12px;font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;resize:vertical}
+textarea:focus{outline:none;border-color:var(--teal)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+button{background:var(--teal-dim);border:none;color:#04222b;font-weight:700;padding:10px 16px;border-radius:9px;cursor:pointer;font-size:14px}
+button.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+button.ghost:hover{border-color:var(--teal)}
+button:hover{filter:brightness(1.1)}
+.summary-strip{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.stat{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;min-width:110px;text-align:center}
+.stat .n{font-size:24px;font-weight:800}
+.stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.6px;text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+td{padding:9px 10px;border-bottom:1px solid rgba(36,54,92,.5)}
+tr.abn td{background:rgba(248,113,113,.06)}
+.chip{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700}
+.chip.normal{background:rgba(52,211,153,.15);color:var(--green)}
+.chip.border{background:rgba(251,191,36,.15);color:var(--amber)}
+.chip.high{background:rgba(248,113,113,.15);color:var(--red)}
+.chip.low{background:rgba(248,113,113,.15);color:var(--red)}
+.combo{border-radius:12px;padding:14px 16px;margin-bottom:12px;border-left:4px solid}
+.combo.sev-High{border-left-color:var(--red);background:rgba(248,113,113,.08)}
+.combo.sev-Moderate{border-left-color:var(--amber);background:rgba(251,191,36,.07)}
+.combo h3{font-size:15px;margin-bottom:6px}
+.combo .sevtag{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;padding:2px 8px;border-radius:99px;margin-left:8px;vertical-align:middle}
+.combo.sev-High .sevtag{background:var(--red);color:#3b0a0a}
+.combo.sev-Moderate .sevtag{background:var(--amber);color:#3d2c00}
+.combo p{color:var(--muted);font-size:13.5px;line-height:1.55}
+.combo .trig{margin-top:8px;font-size:13px;color:var(--text)}
+.combo .trig span{display:inline-block;background:rgba(248,113,113,.16);color:var(--red);border-radius:6px;padding:2px 8px;margin:2px 4px 2px 0;font-size:12.5px;font-weight:600}
+#summaryOut{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap}
+footer{color:var(--muted);font-size:12px;text-align:center;margin-top:24px}
+.empty{color:var(--muted);font-size:14px;padding:8px 0}
+.hide{display:none}
+@media print{body{background:#fff;color:#111}.card,#inputCard,.row,button,header .logo{display:none}#summaryCard{display:block}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div class="logo">M</div><div><h1>MedGate Sentinel</h1><div class="tag">Intelligent medical report analyzer &middot; flags abnormal indicators and concerning combinations of results</div></div></header>
+
+<div class="card" id="inputCard">
+  <h2>Report Input</h2>
+  <div class="row" style="margin:0 0 10px">
+    <button class="ghost" onclick="loadSample(0)">Sample: Diabetic pattern</button>
+    <button class="ghost" onclick="loadSample(1)">Sample: Anemia pattern</button>
+    <button class="ghost" onclick="loadSample(2)">Sample: Thyroid + Kidney</button>
+  </div>
+  <textarea id="reportText" placeholder="Paste lab report text here, or upload a .txt file"></textarea>
+  <div class="row">
+    <input type="file" id="fileIn" accept=".txt,text/plain" style="color:var(--muted)">
+    <button onclick="analyze()">Analyze Report</button>
+    <button class="ghost" onclick="document.getElementById('reportText').value='';analyze()">Clear</button>
+  </div>
+</div>
+
+<div class="card hide" id="resultsCard">
+  <h2>Flagged Values</h2>
+  <div class="summary-strip" id="strip"></div>
+  <table><thead><tr><th>Test</th><th>Value</th><th>Reference</th><th>Status</th></tr></thead><tbody id="tbody"></tbody></table>
+</div>
+
+<div class="card hide" id="comboCard">
+  <h2>Concerning Combinations Detected</h2>
+  <p class="empty" id="comboNone" style="display:none">No multi-marker patterns fired in this report. Individual flags above still stand.</p>
+  <div id="combos"></div>
+  <p class="empty" style="margin-top:6px">A pattern is flagged only when several related markers sit outside range together. One abnormal value alone rarely means much; the combination is what deserves review.</p>
+</div>
+
+<div class="card hide" id="summaryCard">
+  <h2>Review Summary</h2>
+  <div class="row" style="margin-bottom:10px">
+    <button onclick="genSummary()">Generate Summary</button>
+    <button class="ghost" onclick="downloadSummary()">Download as .txt</button>
+    <button class="ghost" onclick="window.print()">Print</button>
+  </div>
+  <div id="summaryOut"></div>
+</div>
+
+<footer>MedGate Sentinel &middot; Prototype for hackathon demonstration. Not a medical device. Always consult a doctor.</footer>
+</div>
+<script>
+const TESTS = {
+ "hemoglobin":{n:"Hemoglobin",u:"g/dL",lo:13,hi:17,a:["haemoglobin","hb","hgb"]},
+ "wbc":{n:"Total WBC Count",u:"cells/uL",lo:4000,hi:11000,a:["total leukocyte count","tlc","leucocyte count","leukocyte count","wbc count"]},
+ "platelets":{n:"Platelet Count",u:"cells/uL",lo:150000,hi:410000,a:["platelet count","plt"]},
+ "fasting_glucose":{n:"Fasting Blood Sugar",u:"mg/dL",lo:70,hi:100,a:["fasting blood sugar","fbs","fasting glucose","fasting plasma glucose"]},
+ "random_glucose":{n:"Random Blood Sugar",u:"mg/dL",lo:70,hi:140,a:["random blood sugar","rbs","random glucose","post prandial blood sugar","ppbs","post prandial glucose"]},
+ "hba1c":{n:"HbA1c",u:"%",lo:4,hi:5.6,a:["glycated hemoglobin","hba 1c","glycosylated hemoglobin"]},
+ "urea":{n:"Blood Urea",u:"mg/dL",lo:15,hi:40,a:["urea","blood urea nitrogen","bun"]},
+ "creatinine":{n:"Serum Creatinine",u:"mg/dL",lo:0.7,hi:1.3,a:["creatinine","serum creatinine"]},
+ "egfr":{n:"eGFR",u:"mL/min/1.73m2",lo:90,hi:200,a:["egfr","estimated gfr","gfr"]},
+ "sodium":{n:"Sodium",u:"mEq/L",lo:135,hi:145,a:["sodium","na+"]},
+ "potassium":{n:"Potassium",u:"mEq/L",lo:3.5,hi:5.1,a:["potassium","k+"]},
+ "tsh":{n:"TSH",u:"uIU/mL",lo:0.4,hi:4,a:["tsh","thyroid stimulating hormone"]},
+ "t4":{n:"Total T4",u:"ug/dL",lo:5,hi:12,a:["t4","total t4","thyroxine","free t4"]},
+ "t3":{n:"Total T3",u:"ng/dL",lo:80,hi:200,a:["t3","total t3","triiodothyronine"]},
+ "alt":{n:"ALT (SGPT)",u:"U/L",lo:7,hi:55,a:["alt","sgpt","alt (sgpt)","sgpt (alt)"]},
+ "ast":{n:"AST (SGOT)",u:"U/L",lo:8,hi:48,a:["ast","sgot","ast (sgot)","sgot (ast)"]},
+ "bilirubin":{n:"Total Bilirubin",u:"mg/dL",lo:0.2,hi:1.2,a:["total bilirubin","bilirubin total","serum bilirubin"]},
+ "cholesterol":{n:"Total Cholesterol",u:"mg/dL",lo:100,hi:200,a:["total cholesterol","cholesterol total","serum cholesterol"]},
+ "ldl":{n:"LDL Cholesterol",u:"mg/dL",lo:40,hi:100,a:["ldl","ldl cholesterol","ldl-c"]},
+ "hdl":{n:"HDL Cholesterol",u:"mg/dL",lo:40,hi:80,a:["hdl","hdl cholesterol","hdl-c"]},
+ "triglycerides":{n:"Triglycerides",u:"mg/dL",lo:50,hi:150,a:["triglycerides","tg","trig"]},
+ "vitd":{n:"Vitamin D (25-OH)",u:"ng/mL",lo:30,hi:100,a:["vitamin d","vitamin d3","25-hydroxy vitamin d","25-oh vitamin d","vit d"]},
+ "vitb12":{n:"Vitamin B12",u:"pg/mL",lo:200,hi:900,a:["vitamin b12","b12","cobalamin"]},
+ "ferritin":{n:"Ferritin",u:"ng/mL",lo:30,hi:300,a:["ferritin","serum ferritin"]},
+ "mcv":{n:"MCV",u:"fL",lo:80,hi:100,a:["mcv","mean corpuscular volume"]},
+ "calcium":{n:"Serum Calcium",u:"mg/dL",lo:8.6,hi:10.3,a:["calcium","serum calcium","total calcium"]}
+};
+
+const COMBOS = [
+ {id:"dm", title:"Uncontrolled blood sugar pattern", sev:"High", tests:["fasting_glucose","hba1c"], need:2,
+  why:"This pattern may suggest chronically elevated blood sugar (possible diabetes or poor glycemic control), and further medical review is advised.",
+  trig:{high:["fasting_glucose","hba1c"]}},
+ {id:"anemia", title:"Iron deficiency anemia pattern", sev:"High", tests:["hemoglobin","mcv","ferritin"], need:2,
+  why:"This pattern may suggest iron deficiency anemia (small, pale red cells with low iron stores), and further medical review is advised.",
+  trig:{low:["hemoglobin","mcv","ferritin"]}},
+ {id:"renal", title:"Kidney function concern", sev:"High", tests:["creatinine","urea","egfr"], need:2,
+  why:"This pattern may suggest reduced kidney clearance, and further medical review is advised.",
+  trig:{high:["creatinine","urea"], low:["egfr"]}},
+ {id:"thyro", title:"Hypothyroid pattern", sev:"High", tests:["tsh","t4"], need:2,
+  why:"This pattern may suggest an underactive thyroid (high TSH driving low T4), and further medical review is advised.",
+  trig:{high:["tsh"], low:["t4"]}},
+ {id:"liver", title:"Liver stress pattern", sev:"High", tests:["alt","ast","bilirubin"], need:2,
+  why:"This pattern may suggest liver cell stress or reduced bile flow, and further medical review is advised.",
+  trig:{high:["alt","ast","bilirubin"]}},
+ {id:"lipid", title:"Lipid risk cluster", sev:"Moderate", tests:["ldl","triglycerides","hdl"], need:2,
+  why:"This pattern may suggest an adverse lipid profile linked to cardiovascular risk, and further medical review is advised.",
+  trig:{high:["ldl","triglycerides"], low:["hdl"]}},
+ {id:"vtd", title:"Vitamin D deficiency with low calcium", sev:"Moderate", tests:["vitd","calcium"], need:2,
+  why:"This pattern may suggest vitamin D deficiency affecting calcium levels, and further medical review is advised.",
+  trig:{low:["vitd","calcium"]}},
+ {id:"inflam", title:"Inflammatory response pattern", sev:"Moderate", tests:["wbc","platelets"], need:2,
+  why:"This pattern may suggest an active inflammatory or infectious process, and further medical review is advised.",
+  trig:{high:["wbc","platelets"]}}
+];
+
+const SAMPLES = [
+`Patient: Ramesh K, Age 46, Male
+Fasting Blood Sugar: 182 mg/dL (Reference: 70-100)
+HbA1c: 8.9 % (Reference: 4.0-5.6)
+Random Blood Sugar: 265 mg/dL (70-140)
+Total Cholesterol: 236 mg/dL (<200)
+LDL Cholesterol: 158 mg/dL (<100)
+HDL Cholesterol: 34 mg/dL (40-60)
+Triglycerides: 288 mg/dL (<150)
+Serum Creatinine: 1.1 mg/dL (0.7-1.3)
+ALT (SGPT): 62 U/L (7-55)`,
+`Patient: Anita S, Age 29, Female
+Hemoglobin: 9.2 g/dL (Reference: 12.0-15.5)
+MCV: 71.4 fL (80-100)
+Ferritin: 8 ng/mL (30-300)
+Vitamin B12: 148 pg/mL (200-900)
+Total WBC Count: 12400 cells/uL (4000-11000)
+Platelet Count: 512000 cells/uL (150000-410000)`,
+`Patient: Joseph M, Age 58, Male
+TSH: 11.8 uIU/mL (Reference: 0.4-4.0)
+Total T4: 3.1 ug/dL (5.0-12.0)
+Blood Urea: 68 mg/dL (15-40)
+Serum Creatinine: 2.4 mg/dL (0.7-1.3)
+eGFR: 38 mL/min/1.73m2 (>90)
+Sodium: 133 mEq/L (135-145)
+Potassium: 5.6 mEq/L (3.5-5.1)
+Vitamin D: 12 ng/mL (30-100)`];
+
+function canon(raw){
+ let s = raw.toLowerCase().replace(/[^a-z0-9+\- ]/g," ").replace(/\s+/g," ").trim();
+ for(const k in TESTS){ if(s===k || TESTS[k].a.includes(s)) return k; }
+ for(const k in TESTS){ if(s.includes(k) || TESTS[k].a.some(al=>s.includes(al))) return k; }
+ return null;
+}
+function parse(txt){
+ const out=[]; const seen=new Set();
+ txt.split(/\n/).forEach(line=>{
+   line = line.replace(/\((?![^)]*\d\s*[-\u2013t ]\s*\d)[^)]*\)/g,'').trim();
+   const m = line.match(/^\s*[:\-*\u2022]?\s*([A-Za-z][A-Za-z0-9 \(\)\+\-\/]{1,40}?)\s*[:=\-]?\s*(-?\d+(?:\.\d+)?)\s*([A-Za-z\/%\u00b5\u03bc\u00d7\^0-9\. ]{0,18}?)\s*[\(\[]?\s*(?:Reference(?:\s*Range)?|Ref|R\/R|Normal)?\s*[:\-]?\s*(-?\d+(?:\.\d+)?)\s*[-\u2013to ]+\s*(-?\d+(?:\.\d+)?)\s*(?:[A-Za-z\/%\u00b5\u03bc ]*)?[\)\]]?\s*$/i);
+   const m2 = line.match(/^\s*[:\-*\u2022]?\s*([A-Za-z][A-Za-z0-9 \(\)\+\-\/]{1,40}?)\s*[:=\-]?\s*(-?\d+(?:\.\d+)?)\s*([A-Za-z\/%\u00b5\u03bc\^0-9\. ]{0,18})\s*$/);
+   if(m){
+     const k=canon(m[1]); if(!k||seen.has(k))return; seen.add(k);
+     out.push({key:k,val:parseFloat(m[2]),lo:parseFloat(m[4]),hi:parseFloat(m[5])});
+   } else if(m2){
+     const k=canon(m2[1]); if(!k||seen.has(k))return; seen.add(k);
+     const d=TESTS[k];
+     out.push({key:k,val:parseFloat(m2[2]),lo:d.lo,hi:d.hi});
+   }
+ });
+ out.forEach(r=>{ r.status = r.val>r.hi?"high":(r.val<r.lo?"low":(r.val>=r.hi*0.9||r.val<=r.lo*1.1?"border":"normal")); });
+ return out;
+}
+function chipCls(s){return s==="high"?"chip high":s==="low"?"chip low":s==="border"?"chip border":"chip normal"}
+function chipTxt(s){return s==="high"?"Abnormal High":s==="low"?"Abnormal Low":s==="border"?"Borderline":"Normal"}
+let LAST=null;
+function analyze(){
+ const txt=document.getElementById("reportText").value||"";
+ const rows=parse(txt); LAST=rows;
+ document.getElementById("resultsCard").classList.toggle("hide",rows.length===0);
+ document.getElementById("comboCard").classList.toggle("hide",rows.length===0);
+ document.getElementById("summaryCard").classList.toggle("hide",rows.length===0);
+ if(!rows.length){document.getElementById("strip").innerHTML='<div class="empty">No recognizable test values found. Try a sample report.</div>';document.getElementById("tbody").innerHTML="";document.getElementById("combos").innerHTML="";return;}
+ const order={high:0,low:0,border:1,normal:2};
+ const sorted=[...rows].sort((a,b)=>(order[a.status]-order[b.status])||a.key.localeCompare(b.key));
+ const abn=rows.filter(r=>r.status==="high"||r.status==="low").length;
+ const bor=rows.filter(r=>r.status==="border").length;
+ document.getElementById("strip").innerHTML =
+   '<div class="stat"><div class="n">'+rows.length+'</div><div class="l">Tests found</div></div>'+
+   '<div class="stat"><div class="n" style="color:var(--red)">'+abn+'</div><div class="l">Abnormal</div></div>'+
+   '<div class="stat"><div class="n" style="color:var(--amber)">'+bor+'</div><div class="l">Borderline</div></div>';
+ document.getElementById("tbody").innerHTML = sorted.map(r=>{
+   const d=TESTS[r.key];
+   return '<tr class="'+((r.status==="high"||r.status==="low")?"abn":"")+'"><td>'+d.n+'</td><td>'+r.val+' '+d.u+'</td><td>'+fmtRange(r)+'</td><td><span class="'+chipCls(r.status)+'">'+chipTxt(r.status)+'</span></td></tr>';
+ }).join("");
+ fireCombos(rows);
+}
+function fmtRange(r){const d=TESTS[r.key];return (r.lo===d.lo&&r.hi===d.hi)?(r.lo+" \u2013 "+r.hi+" "+d.u):(r.lo+" \u2013 "+r.hi+" "+d.u+" (per report)");}
+function fireCombos(rows){
+ const by={};rows.forEach(r=>by[r.key]=r);
+ const fired=[];
+ COMBOS.forEach(c=>{
+   const hits=[];let ok=true;
+   const dirs=[...new Set([].concat(c.trig.high||[],c.trig.low||[]))];
+   dirs.forEach(t=>{const r=by[t];if(!r||r.status==="normal"||r.status==="border"){ok=false;return;}
+     const want=(c.trig.high||[]).includes(t)?"high":"low";
+     if(r.status!==want){ok=false;return;} hits.push(t);});
+   if(ok&&hits.length>=Math.min(c.need,dirs.length)) fired.push({c,hits});
+ });
+ document.getElementById("comboNone").style.display=fired.length?"none":"block";
+ document.getElementById("combos").innerHTML=fired.map(f=>{
+   const tags=f.hits.map(h=>TESTS[h].n+" "+by[h].val+" "+TESTS[h].u).map(t=>"<span>"+t+"</span>").join("");
+   return '<div class="combo sev-'+f.c.sev+'"><h3>'+f.c.title+'<span class="sevtag">'+f.c.sev+'</span></h3><p>'+f.c.why+'</p><div class="trig">Triggered by: '+tags+'</div></div>';
+ }).join("");
+ return fired;
+}
+function headerInfo(txt){
+ const n=txt.match(/Patient\s*[:\-]?\s*([A-Za-z .]{2,40})/i);
+ const a=txt.match(/Age\s*[:\-]?\s*(\d{1,3})/i);
+ const g=txt.match(/\b(Male|Female)\b/i);
+ return (n?("Patient: "+n[1].trim()):"")+(a?" | Age: "+a[1]:"")+(g?" | "+g[1]:"");
+}
+function genSummary(){
+ if(!LAST)return;
+ const abn=LAST.filter(r=>r.status==="high"||r.status==="low");
+ const bor=LAST.filter(r=>r.status==="border");
+ let s="MEDGATE SENTINEL - REVIEW SUMMARY\n"+new Date().toString()+"\n";
+ const h=headerInfo(document.getElementById("reportText").value||"");
+ if(h)s+=h+"\n";
+ s+="\nTESTS ANALYZED: "+LAST.length+" (abnormal: "+abn.length+", borderline: "+bor.length+")\n";
+ if(abn.length){s+="\nVALUES OUTSIDE REFERENCE RANGE:\n";abn.forEach(r=>{s+="  - "+TESTS[r.key].n+": "+r.val+" "+TESTS[r.key].u+" (ref "+r.lo+"-"+r.hi+") ["+chipTxt(r.status)+"]\n";});}
+ if(bor.length){s+="\nBORDERLINE:\n";bor.forEach(r=>{s+="  - "+TESTS[r.key].n+": "+r.val+" "+TESTS[r.key].u+" (ref "+r.lo+"-"+r.hi+")\n";});}
+ const fired=fireCombos(LAST);
+ if(fired.length){s+="\nCONCERNING COMBINATIONS DETECTED:\n";fired.forEach(f=>{s+="  - ["+f.c.sev+"] "+f.c.title+"\n    "+f.c.why+"\n    Markers: "+f.hits.map(h=>TESTS[h].n).join(", ")+"\n";});}
+ s+="\nNote: Prototype output for demonstration. Not a medical device. Always consult a doctor.\n";
+ document.getElementById("summaryOut").textContent=s;
+}
+function downloadSummary(){
+ genSummary();
+ const b=new Blob([document.getElementById("summaryOut").textContent],{type:"text/plain"});
+ const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="medgate-sentinel-summary.txt";a.click();
+}
+function loadSample(i){document.getElementById("reportText").value=SAMPLES[i];analyze();}
+document.getElementById("fileIn").addEventListener("change",e=>{
+ const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{document.getElementById("reportText").value=r.result;analyze();};r.readAsText(f);
+});
+loadSample(0);
+</script>
+</body>
+</html>
