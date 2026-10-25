@@ -279,6 +279,13 @@ document.getElementById("fileIn").addEventListener("change",e=>{
  const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{document.getElementById("reportText").value=r.result;analyze();};r.readAsText(f);
 });
 loadSample(0);
+
+/* demo-mode hooks for automated capture: ?demo=1 sample+analyze, ?demo=2 +summary */
+(function(){
+  var q=new URLSearchParams(location.search).get('demo');
+  if(q==='1'){loadSample(1);analyze();}
+  else if(q==='2'){loadSample(1);analyze();genSummary();}
+})();
 </script>
 </body>
 </html>
