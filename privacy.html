@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy · MedGate Sentinel</title>
+<style>
+:root{--navy:#0b1526;--panel:#12203a;--teal:#2dd4bf;--text:#e6eefb;--muted:#8fa3c4;--border:#24365c}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--navy);color:var(--text);line-height:1.65;padding:40px 16px}
+.wrap{max-width:760px;margin:0 auto}
+a{color:var(--teal)}
+h1{font-size:24px;margin-bottom:6px}
+.up{color:var(--muted);font-size:13px;margin-bottom:24px}
+h2{font-size:16px;color:var(--teal);margin:22px 0 8px}
+p,li{font-size:14.5px}
+ul{margin:6px 0 6px 20px}
+footer{margin-top:36px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--border);padding-top:14px}
+footer a{color:var(--teal)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Privacy Policy</h1>
+<p class="up">Last updated: November 16, 2026</p>
+
+<p>MedGate Sentinel is a lab-report analysis prototype built by Shlok Vane. It is not a medical device and its output is not medical advice. This page explains, in plain language, what the app does and does not do with the information you put into it.</p>
+
+<h2>The short version</h2>
+<ul>
+<li>You can use the analyzer without any account. In that mode nothing you paste ever leaves your browser.</li>
+<li>An account only exists so you can save reports you explicitly choose to save, and open them again later from another device.</li>
+<li>Your password is stored only as a bcrypt hash. It can never be read back by anyone, including the operator.</li>
+<li>There are no trackers, no analytics, no advertising, and no third-party sharing.</li>
+<li>You can export everything tied to your account, or delete your account and all its data, from inside the app at any time.</li>
+</ul>
+
+<h2>What the app does</h2>
+<p>You paste or upload the text of a lab report. The analyzer reads it entirely inside your browser: it matches test names, compares values against the reference ranges printed on your report, and flags patterns where several related markers sit outside their range together. This parsing and analysis happens on your device.</p>
+
+<h2>Local-only mode (no account)</h2>
+<p>Without signing in, the app works entirely in your browser and stores nothing on any server. Your report text stays on your device. Closing the tab leaves nothing behind on a server, because nothing was ever sent to one.</p>
+
+<h2>Signed-in mode (saved reports)</h2>
+<p>If you create an account and press <strong>Save report</strong>, the report text and its parsed results are stored on the app's server so you can revisit them later. We store only what you explicitly save:</p>
+<ul>
+<li>the email address and optional name you give at sign-up;</li>
+<li>a bcrypt hash of your password (never the password itself);</li>
+<li>the reports you chose to save, with the date each was saved.</li>
+</ul>
+<p>Reports you analyze but do not save are never transmitted to the server.</p>
+
+<h2>Access and control</h2>
+<ul>
+<li><strong>Export:</strong> a signed-in user can download everything stored for their account at any time.</li>
+<li><strong>Deletion:</strong> deleting a single report removes it permanently. Deleting your account removes your account, every saved report, and every related row in the database immediately and permanently.</li>
+</ul>
+
+<h2>Sessions</h2>
+<p>Sign-in uses a signed token valid for 30 days, kept in your browser's local storage. There is one token per account on one device. No cookies are used for tracking. Sign-out removes the token from your browser.</p>
+
+<h2>What we never do</h2>
+<ul>
+<li>We do not sell, rent, or share your data with anyone.</li>
+<li>We do not use your data to train anything.</li>
+<li>We do not send email except what you explicitly request (password reset, if implemented).</li>
+</ul>
+
+<h2>Limitations you should know</h2>
+<ul>
+<li>Communications between your browser and the server are encrypted in transit (HTTPS).</li>
+<li>Like any prototype running on shared free infrastructure, this server is offered as-is, without warranty. If the data matters to you medically, keep your own copy: the export function gives you the full file.</li>
+</ul>
+
+<h2>Contact</h2>
+<p>Questions about this policy or your data: reach Shlok Vane through <a href="https://shlok.is-a.dev">shlok.is-a.dev</a>.</p>
+
+<footer>MedGate Sentinel · prototype, not a medical device. Always consult a doctor. Made by <a href="https://shlok.is-a.dev">Shlok V.</a> · <a href="index.html">Home</a> · <a href="about.html">About</a></footer>
+</div>
+</body>
+</html>

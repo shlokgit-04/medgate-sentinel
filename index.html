@@ -50,11 +50,34 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:24px}
 .empty{color:var(--muted);font-size:14px;padding:8px 0}
 .hide{display:none}
 @media print{body{background:#fff;color:#111}.card,#inputCard,.row,button,header .logo{display:none}#summaryCard{display:block}}
+
+.authbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:16px;font-size:13.5px}
+.authbar .who{color:var(--muted)}
+.authbar a{color:var(--teal);text-decoration:none;font-weight:600}
+.authbar button{padding:6px 12px;font-size:12.5px}
+.hist-item{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 10px;border-bottom:1px solid rgba(36,54,92,.5);font-size:14px}
+.hist-item:last-child{border-bottom:none}
+.hist-item .when{color:var(--muted);font-size:12.5px}
+.hist-item .t{font-weight:600}
+.hist-item .mini{padding:4px 10px;font-size:12px;border-radius:7px}
+.hist-item button.mini{background:var(--panel2);border:1px solid var(--border);color:var(--text)}
+.hist-item button.mini:hover{border-color:var(--teal)}
+.hist-item button.mini.del{color:var(--red)}
+footer a{color:var(--teal);text-decoration:none}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header><div class="logo">M</div><div><h1>MedGate Sentinel</h1><div class="tag">Intelligent medical report analyzer &middot; flags abnormal indicators and concerning combinations of results</div></div></header>
+
+<div class="authbar" id="authbar">
+  <span id="authLeft">Browsing in local-only mode: your reports stay in this browser.</span>
+  <span style="margin-left:auto"></span>
+  <a id="authSignIn" href="login.html">Sign in</a>
+  <a id="authRegister" href="register.html">Create account</a>
+  <span id="authWho" class="who hide"></span>
+  <button class="ghost" id="authOut" style="display:none">Sign out</button>
+</div>
 
 <div class="card" id="inputCard">
   <h2>Report Input</h2>
@@ -90,11 +113,20 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:24px}
     <button onclick="genSummary()">Generate Summary</button>
     <button class="ghost" onclick="downloadSummary()">Download as .txt</button>
     <button class="ghost" onclick="window.print()">Print</button>
+    <button id="saveBtn" style="display:none" onclick="saveReport()">Save report</button>
   </div>
   <div id="summaryOut"></div>
 </div>
 
-<footer>MedGate Sentinel &middot; Prototype for hackathon demonstration. Not a medical device. Always consult a doctor.</footer>
+
+<div class="card hide" id="historyCard">
+  <h2>Saved Reports</h2>
+  <div id="historyList"></div>
+  <p class="empty" style="margin-top:6px">Saved reports live on the server for your account only. Local-only reports are never sent anywhere.</p>
+</div>
+
+<footer>MedGate Sentinel &middot; Prototype for hackathon demonstration. Not a medical device. Always consult a doctor. &middot; Made by <a href="https://shlok.is-a.dev">Shlok V.</a> &middot; <a href="privacy.html">Privacy policy</a> &middot; <a href="about.html">About</a> &middot; <a href="login.html">Sign in</a></footer>
+
 </div>
 <script>
 const TESTS = {
@@ -286,6 +318,99 @@ loadSample(0);
   if(q==='1'){loadSample(1);analyze();}
   else if(q==='2'){loadSample(1);analyze();genSummary();}
 })();
+</script>
+
+<script>
+/* account + saved-report history (server sync is optional; analyzer stays local) */
+const mgsToken = () => localStorage.getItem("mgs_token");
+const mgsUser = () => { try { return JSON.parse(localStorage.getItem("mgs_user")||"null"); } catch(e){ return null; } };
+
+async function authInit(){
+  const signedIn = !!(mgsToken() && mgsUser());
+  document.getElementById("authSignIn").style.display = signedIn ? "none" : "";
+  document.getElementById("authRegister").style.display = signedIn ? "none" : "";
+  document.getElementById("authOut").style.display = signedIn ? "" : "none";
+  document.getElementById("saveBtn").style.display = signedIn ? "" : "none";
+  document.getElementById("authLeft").textContent = signedIn
+    ? "Signed in as " + (mgsUser().email || "") + ". Reports you save sync to your account."
+    : "Browsing in local-only mode: your reports stay in this browser.";
+  if (signedIn) { refreshHistory(); }
+  else { document.getElementById("historyCard").classList.add("hide"); }
+}
+
+function signOut(){
+  localStorage.removeItem("mgs_token");
+  localStorage.removeItem("mgs_user");
+  authInit();
+}
+
+document.getElementById("authOut").addEventListener("click", signOut);
+
+async function refreshHistory(){
+  const card = document.getElementById("historyCard");
+  card.classList.remove("hide");
+  const list = document.getElementById("historyList");
+  try {
+    const res = await fetch(API_BASE + "/api/reports", {headers:{"Authorization":"Bearer "+mgsToken()}});
+    if (res.status === 401) { signOut(); return; }
+    const data = await res.json();
+    const items = (data.reports || []);
+    list.innerHTML = items.length ? items.map(r =>
+      '<div class="hist-item"><span class="t">'+esc(r.title||"Untitled report")+'</span>'+
+      '<span class="when">'+esc((r.created_at||"").replace("T"," ").slice(0,16))+' UTC</span>'+
+      '<span class="mini-stat">'+(r.results||[]).length+' values</span>'+
+      '<button class="mini" onclick="loadSaved(\''+r.id+'\')">Open</button>'+
+      '<button class="mini del" onclick="delSaved(\''+r.id+'\')">Delete</button></div>').join("")
+      : '<div class="empty">No saved reports yet. Analyze a report, then press Save report.</div>';
+  } catch(e) {
+    list.innerHTML = '<div class="empty">Could not reach the sync API. Saved reports will load when it is back.</div>';
+  }
+}
+
+function esc(s){ const d=document.createElement("div"); d.textContent=String(s); return d.innerHTML; }
+
+async function saveReport(){
+  if(!mgsToken()){ location.href="login.html"; return; }
+  const btn = document.getElementById("saveBtn");
+  btn.disabled = true; const old = btn.textContent; btn.textContent = "Saving…";
+  try {
+    const body = {
+      title: headerInfo(document.getElementById("reportText").value||"") || ("Report "+new Date().toLocaleDateString()),
+      report_text: document.getElementById("reportText").value||"",
+      results: LAST || []
+    };
+    const res = await fetch(API_BASE + "/api/reports", {
+      method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer "+mgsToken()},
+      body: JSON.stringify(body)});
+    const data = await res.json();
+    if (res.status === 201) { refreshHistory(); }
+    else alert(data.error || "Could not save the report.");
+  } catch(e) { alert("Could not save the report. Check your connection."); }
+  btn.disabled = false; btn.textContent = old;
+}
+
+async function loadSaved(id){
+  try {
+    const res = await fetch(API_BASE + "/api/reports/"+id, {headers:{"Authorization":"Bearer "+mgsToken()}});
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || "Could not open the report."); return; }
+    document.getElementById("reportText").value = data.report.report_text || "";
+    analyze();
+    window.scrollTo({top:0, behavior:"smooth"});
+  } catch(e) { alert("Could not open the report."); }
+}
+
+async function delSaved(id){
+  if(!confirm("Delete this saved report permanently?")) return;
+  try {
+    const res = await fetch(API_BASE + "/api/reports/"+id, {
+      method:"DELETE", headers:{"Authorization":"Bearer "+mgsToken()}});
+    if (res.ok || res.status === 404) refreshHistory();
+    else { const d = await res.json(); alert(d.error || "Could not delete."); }
+  } catch(e) { alert("Could not delete the report."); }
+}
+
+authInit();
 </script>
 </body>
 </html>

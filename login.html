@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign in · MedGate Sentinel</title>
+<style>
+:root{--navy:#0b1526;--panel:#12203a;--panel2:#182a4a;--teal:#2dd4bf;--teal-dim:#14b8a6;--text:#e6eefb;--muted:#8fa3c4;--red:#f87171;--border:#24365c}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--navy);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+.wrap{max-width:420px;margin:48px auto 0;width:100%;padding:0 16px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:24px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;margin-bottom:22px}
+.brand .logo{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,var(--teal),#0ea5e9);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:#04222b}
+.brand span.n{font-weight:700;font-size:16px}
+h1{font-size:22px;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:14px;margin-bottom:18px}
+.field{display:block;margin-bottom:14px}
+.field span{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.field input{width:100%;font:inherit;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:10px 12px}
+.field input:focus{outline:none;border-color:var(--teal)}
+button{width:100%;font:inherit;font-weight:700;background:var(--teal-dim);color:#04222b;border:none;border-radius:9px;padding:11px 14px;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
+.msg{font-size:14px;margin-bottom:14px;min-height:18px}
+.msg.err{color:var(--red)}.msg.ok{color:#34d399}
+.swap{font-size:14px;color:var(--muted);margin-top:14px}
+.swap a{color:var(--teal)}
+footer{margin-top:auto;text-align:center;color:var(--muted);font-size:12px;padding:24px 0}
+footer a{color:var(--teal);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="brand" href="index.html"><span class="logo">M</span><span class="n">MedGate Sentinel</span></a>
+  <div class="card">
+    <h1>Welcome back</h1>
+    <p class="sub">Sign in to save and revisit your analyzed reports on any device.</p>
+    <p id="msg" class="msg"></p>
+    <form id="form">
+      <label class="field"><span>Email</span><input id="email" type="email" autocomplete="email" required></label>
+      <label class="field"><span>Password</span><input id="password" type="password" autocomplete="current-password" required></label>
+      <button id="go" type="submit">Sign in</button>
+    </form>
+    <p class="swap">New here? <a href="register.html">Create an account</a> · or keep using <a href="index.html">local-only mode</a></p>
+  </div>
+</div>
+<footer>MedGate Sentinel · prototype, not a medical device. Made by <a href="https://shlok.is-a.dev">Shlok V.</a> · <a href="privacy.html">Privacy policy</a> · <a href="about.html">About</a></footer>
+<script>
+const $ = id => document.getElementById(id);
+$("form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const btn = $("go"); btn.disabled = true;
+  $("msg").className = "msg"; $("msg").textContent = "Signing in…";
+  try {
+    const res = await fetch(API_BASE + "/api/auth/login", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email: $("email").value.trim(), password: $("password").value})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Sign-in failed.");
+    localStorage.setItem("mgs_token", data.token);
+    localStorage.setItem("mgs_user", JSON.stringify(data.user));
+    location.href = "index.html";
+  } catch (err) {
+    $("msg").className = "msg err"; $("msg").textContent = err.message;
+    btn.disabled = false;
+  }
+});
+</script>
+<script src="config.js"></script>
+</body>
+</html>
